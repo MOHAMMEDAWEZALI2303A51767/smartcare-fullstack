@@ -1,124 +1,31 @@
-const { Appointment, Doctor, Patient } = require('../models');
-const logger = require('../utils/logger');
-const { successResponse, errorResponse } = require('../utils/responseHandler');
-const { APPOINTMENT_STATUS } = require('../config/constants');
+const express = require('express');
+const router = express.Router();
 
-// CREATE APPOINTMENT
-const createAppointment = async (req, res) => {
-  try {
-    const { doctor: doctorId, scheduledDate, startTime } = req.body;
+const appointmentController = require('../controllers/appointmentController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-    const patient = await Patient.findOne({ user: req.user._id });
-    if (!patient) return errorResponse(res, 'Patient profile not found', 404);
+// Create appointment
+router.post('/', protect, authorize('patient'), appointmentController.createAppointment);
 
-    const doctor = await Doctor.findById(doctorId);
-    if (!doctor) return errorResponse(res, 'Doctor not found', 404);
+// Get all appointments
+router.get('/', protect, appointmentController.getAppointments);
 
-    const appointment = await Appointment.create({
-      patient: patient._id,
-      doctor: doctorId,
-      scheduledDate,
-      startTime,
-      status: APPOINTMENT_STATUS.PENDING,
-    });
+// Get single appointment
+router.get('/:id', protect, appointmentController.getAppointmentById);
 
-    return successResponse(res, appointment, 'Appointment created', 201);
-  } catch (err) {
-    logger.error(err);
-    return errorResponse(res, 'Failed to create appointment');
-  }
-};
+// Update appointment
+router.put('/:id', protect, appointmentController.updateAppointment);
 
-// GET ALL APPOINTMENTS
-const getAppointments = async (req, res) => {
-  try {
-    const appointments = await Appointment.find()
-      .populate('doctor')
-      .populate('patient');
+// Cancel appointment
+router.put('/:id/cancel', protect, appointmentController.cancelAppointment);
 
-    return successResponse(res, appointments);
-  } catch (err) {
-    return errorResponse(res, 'Failed to fetch appointments');
-  }
-};
+// Confirm appointment
+router.put('/:id/confirm', protect, authorize('doctor'), appointmentController.confirmAppointment);
 
-// GET SINGLE APPOINTMENT
-const getAppointmentById = async (req, res) => {
-  try {
-    const appointment = await Appointment.findById(req.params.id);
-    if (!appointment) return errorResponse(res, 'Appointment not found', 404);
-    return successResponse(res, appointment);
-  } catch (err) {
-    return errorResponse(res, 'Failed to fetch appointment');
-  }
-};
+// Complete appointment
+router.put('/:id/complete', protect, authorize('doctor'), appointmentController.completeAppointment);
 
-// UPDATE APPOINTMENT
-const updateAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    return successResponse(res, appointment, 'Updated successfully');
-  } catch (err) {
-    return errorResponse(res, 'Update failed');
-  }
-};
+// Reschedule appointment
+router.post('/:id/reschedule', protect, appointmentController.rescheduleAppointment);
 
-// CANCEL APPOINTMENT
-const cancelAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findById(req.params.id);
-    appointment.status = APPOINTMENT_STATUS.CANCELLED;
-    await appointment.save();
-    return successResponse(res, appointment, 'Cancelled');
-  } catch (err) {
-    return errorResponse(res, 'Cancel failed');
-  }
-};
-
-// CONFIRM APPOINTMENT
-const confirmAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findById(req.params.id);
-    appointment.status = APPOINTMENT_STATUS.CONFIRMED;
-    await appointment.save();
-    return successResponse(res, appointment, 'Confirmed');
-  } catch (err) {
-    return errorResponse(res, 'Confirm failed');
-  }
-};
-
-// COMPLETE APPOINTMENT
-const completeAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findById(req.params.id);
-    appointment.status = APPOINTMENT_STATUS.COMPLETED;
-    await appointment.save();
-    return successResponse(res, appointment, 'Completed');
-  } catch (err) {
-    return errorResponse(res, 'Complete failed');
-  }
-};
-
-// RESCHEDULE APPOINTMENT
-const rescheduleAppointment = async (req, res) => {
-  try {
-    const appointment = await Appointment.findById(req.params.id);
-    appointment.scheduledDate = req.body.scheduledDate;
-    appointment.startTime = req.body.startTime;
-    await appointment.save();
-    return successResponse(res, appointment, 'Rescheduled');
-  } catch (err) {
-    return errorResponse(res, 'Reschedule failed');
-  }
-};
-
-module.exports = {
-  createAppointment,
-  getAppointments,
-  getAppointmentById,
-  updateAppointment,
-  cancelAppointment,
-  confirmAppointment,
-  completeAppointment,
-  rescheduleAppointment,
-};
+module.exports = router;
