@@ -4,7 +4,6 @@ const { setupSecurityMiddleware } = require('./middleware/securityMiddleware');
 const { requestLogger, errorLogger } = require('./middleware/loggingMiddleware');
 const { globalErrorHandler, notFoundHandler } = require('./middleware/errorMiddleware');
 const { apiLimiter } = require('./middleware/rateLimiter');
-const routes = require('./routes');
 
 // Initialize Express app
 const app = express();
@@ -25,7 +24,8 @@ app.use('/api/', apiLimiter);
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// API routes
+// ✅ Import routes ONLY ONCE here
+const routes = require('./routes');
 app.use('/api', routes);
 
 // Error logging
