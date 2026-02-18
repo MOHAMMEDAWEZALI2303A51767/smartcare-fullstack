@@ -10,8 +10,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\\\
-S+@\S+\.\S+$/, 'Please enter a valid email'],
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
     },
     password: {
       type: String,
@@ -98,7 +97,7 @@ userSchema.virtual('age').get(function () {
   return age;
 });
 
-// Index for email
+// Indexes
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 
@@ -120,7 +119,7 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Get public profile (remove sensitive data)
+// Public profile method
 userSchema.methods.toPublicProfile = function () {
   return {
     id: this._id,
